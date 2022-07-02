@@ -1,47 +1,65 @@
 #!/usr/bin/env node
-///<reference path="@types/unity-package-extract/index.d.ts"/>
-import isWsl from "is-wsl";
 import clear from "clear";
-import {create} from "filehound";
-import {Choice, prompts} from "prompts";
+import {Choice, prompt} from "prompts";
 import {basename} from "path";
 import {startCase} from "lodash";
-import {extractAssets} from "./unity";
+import rimraf from "rimraf";
+
+import {extractAssets, findEditors, findTemplates, findUnityAssetPackages} from "./unity";
 
 clear();
 
-const drivePath = isWsl ? "/mnt/c/" : "C:/";
-const rawPath = "Users/lroza/AppData/Roaming/Unity/Asset Store-5.x";
-const unityAssetCacheFolder = `${drivePath}${rawPath}`;
+type EditorPromptResponse = {
+    editor: string
+};
 
-function findUnityAssetPackages() {
-    return create()
-        .path(unityAssetCacheFolder)
-        .ext("unitypackage")
-        .findSync()
-        .map(file => file.replaceAll("\\", "/"));
-}
+type PromptResponse = {
+    libs: string[]
+    templateName: string
+};
 
-const unityAssetPackages = findUnityAssetPackages();
-
-const libs: Choice[] = unityAssetPackages.map(pkg => {
-    return {
-        title: startCase(basename(pkg.replace(".unitypackage", ""))),
-        value: pkg,
-        selected: false
-    } as Choice;
-});
+const resolvePackageLabel = (pkg: string) => startCase(basename(pkg.replace(".unitypackage", "")));
 
 (async () => {
-    const selectedLibs = await prompts.multiselect({
-        name: "test",
-        message: "Select libraries:",
-        choices: libs,
-        type: "multiselect"
-    }) as string[]
+    const editors = findEditors().map(editor => ({title: editor, value: editor} as Choice));
+    const editorResponse: EditorPromptResponse = await prompt([
+        {
+            name: "editor",
+            message: "Select Editor version:",
+            choices: editors,
+            type: "select"
+        }
+    ]);
 
-    const newDirs = await extractAssets(selectedLibs);
+    const libs: Choice[] = findUnityAssetPackages().map(pkg => ({
+        title: resolvePackageLabel(pkg),
+        value: pkg
+    }));
+    const response: PromptResponse = await prompt([
+        {
+            name: "templateBase",
+            message: "Choose template to use as base:",
+            choices: findTemplates(editorResponse.editor).map(template => ({title: startCase(basename(template, ".tar.gz")), value: template} as Choice)),
+            type: "select"
+        },
+        {
+            name: "libs",
+            message: "Select libraries:",
+            choices: libs,
+            type: "multiselect"
+        },
+        {
+            name: "templateName",
+            message: "New template name:",
+            type: "text"
+        }
+    ]);
+    console.log(response);
+
+    const newDirs = await extractAssets(response.libs);
     console.log(newDirs);
+
+    newDirs.forEach(dir => rimraf(dir, error => error && console.log(`Could not delete directory ${dir}/: ${error.message || ""}`)));
 })();
 
 
