@@ -1,0 +1,19 @@
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+max_line_length = 180
+insert_final_newline = true
+trim_trailing_whitespace = true
+# TS
+ij_typescript_use_double_quotes = true
+ij_typescript_force_quote_style = true
+ij_typescript_use_semicolon_after_statement = true
+ij_typescript_force_semicolon_style = true
+# TS
+ij_javascript_use_double_quotes = true
+ij_javascript_force_quote_style = true
+ij_javascript_use_semicolon_after_statement = true
+ij_javascript_force_semicolon_style = true

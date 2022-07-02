@@ -5,7 +5,8 @@ import {basename} from "path";
 import {startCase} from "lodash";
 import rimraf from "rimraf";
 
-import {extractAssets, findEditors, findTemplates, findUnityAssetPackages} from "./unity";
+import {compressTemplate, extractAssets, extractTemplate, findEditors, findTemplates, findUnityAssetPackages} from "./unity";
+import {rmDir} from "./files";
 
 clear();
 
@@ -15,14 +16,17 @@ type EditorPromptResponse = {
 
 type PromptResponse = {
     libs: string[]
+    templateBase: string
     templateName: string
+    templateVersion: string
 };
 
 const resolvePackageLabel = (pkg: string) => startCase(basename(pkg.replace(".unitypackage", "")));
+const resolveTemplateName = (name: string, version: string) => `${name}-${version}.tgz`;
 
 (async () => {
-    const editors = findEditors().map(editor => ({title: editor, value: editor} as Choice));
-    const editorResponse: EditorPromptResponse = await prompt([
+    const editors = findEditors().map(editor => ({title: basename(editor), value: editor} as Choice));
+    const {editor}: EditorPromptResponse = await prompt([
         {
             name: "editor",
             message: "Select Editor version:",
@@ -39,7 +43,7 @@ const resolvePackageLabel = (pkg: string) => startCase(basename(pkg.replace(".un
         {
             name: "templateBase",
             message: "Choose template to use as base:",
-            choices: findTemplates(editorResponse.editor).map(template => ({title: startCase(basename(template, ".tar.gz")), value: template} as Choice)),
+            choices: findTemplates(editor).map(template => ({title: basename(template, ".tgz"), value: template} as Choice)),
             type: "select"
         },
         {
@@ -50,16 +54,24 @@ const resolvePackageLabel = (pkg: string) => startCase(basename(pkg.replace(".un
         },
         {
             name: "templateName",
-            message: "New template name:",
+            message: "New template name (without version):",
+            type: "text"
+        },
+        {
+            name: "templateVersion",
+            message: "New template version (eg. 1.0.0):",
             type: "text"
         }
     ]);
-    console.log(response);
+    console.log();
+    const tempAssetDirs = await extractAssets(response.libs);
+    const tempTemplateDir = await extractTemplate(response.templateBase);
+    const newTemplateName = resolveTemplateName(response.templateName, response.templateVersion);
+    const compressedTemplate = await compressTemplate(editor, tempTemplateDir, newTemplateName);
 
-    const newDirs = await extractAssets(response.libs);
-    console.log(newDirs);
-
-    newDirs.forEach(dir => rimraf(dir, error => error && console.log(`Could not delete directory ${dir}/: ${error.message || ""}`)));
+    tempAssetDirs.forEach(rmDir);
+    rmDir(tempTemplateDir);
+    console.log();
 })();
 
 

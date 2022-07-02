@@ -1,18 +1,31 @@
 {
-  "compilerOptions": {
-    "target": "ES6",
-    "module": "commonjs",
-    "lib": ["es6", "ES2021", "ES2021.String", "dom"],
-    "declaration": true,
-    "outDir": "lib",
-    "rootDir": "src",
-    "strict": true,
-    "types": ["node", "fs-extra"],
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "importHelpers": true,
-    "allowJs": true,
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "lib"]
+    "compilerOptions": {
+        "target": "ES6",
+        "module": "commonjs",
+        "lib": [
+            "es6",
+            "ES2021",
+            "ES2021.String",
+            "dom"
+        ],
+        "declaration": true,
+        "outDir": "lib",
+        "rootDir": "src",
+        "strict": true,
+        "types": [
+            "node",
+            "fs-extra"
+        ],
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "importHelpers": true,
+        "allowJs": true
+    },
+    "include": [
+        "src/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "lib"
+    ]
 }
