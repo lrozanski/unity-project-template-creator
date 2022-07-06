@@ -1,15 +1,16 @@
 ///<reference path="@types/unity-package-extract/index.d.ts"/>
-import {UnityExtractClient} from "unity-package-extract";
-import {basename} from "path";
-import {camelCase} from "lodash";
-import {mkdtempSync} from "fs";
 import {dots} from "cli-spinners";
-import Spinnies from "spinnies";
-import {create} from "filehound";
 import {tgz} from "compressing";
+import {create} from "filehound";
+import {mkdirSync, mkdtempSync, readFileSync, writeFileSync} from "fs";
+import {copySync} from "fs-extra";
+import {camelCase, entries} from "lodash";
+import {basename, join} from "path";
+import Spinnies from "spinnies";
+import {UnityExtractClient} from "unity-package-extract";
 
-import {appData, resolvePath} from "./path";
 import {rmDir} from "./files";
+import {appData, resolvePath} from "./path";
 
 export const unityAssetCachePath = "Unity/Asset Store-5.x";
 export const unityAssetCacheFolder = resolvePath(`${appData}/${unityAssetCachePath}`);
@@ -75,7 +76,6 @@ export function findUnityAssetPackages() {
 }
 
 export async function extractTemplate(template: string) {
-
     try {
         const templatePath = resolvePath(template);
         const filename = basename(templatePath, ".tgz");
@@ -97,4 +97,31 @@ export async function compressTemplate(editor: string, srcTemplateDir: string, f
     } catch (error: any) {
         throw error;
     }
+}
+
+export const getPackageFileLocation = (templateDir: string) => join(templateDir, "package", "package.json");
+
+export function parsePackageFile(templateDir: string): Unity.Package {
+    const file = readFileSync(getPackageFileLocation(templateDir), {encoding: "utf-8"});
+
+    return JSON.parse(file) as Unity.Package;
+}
+
+export function writePackageFile(templateDir: string, packageFile: Unity.Package) {
+    writeFileSync(getPackageFileLocation(templateDir), JSON.stringify(packageFile, null, 2), {encoding: "utf-8"});
+}
+
+export function filterOutDependencies(packageFile: Unity.Package, dependencies: string[]): Record<string, string> {
+    const existingDependencies = entries(packageFile.dependencies)
+        .filter(entry => !dependencies.includes(entry[0]));
+
+    return Object.fromEntries(existingDependencies);
+}
+
+export const getProjectDataLocation = (templateDir: string) => join(templateDir, "package", "ProjectData~");
+
+export function copyTempAssets(templateDir: string, paths: string[]) {
+    const projectDataLocation = getProjectDataLocation(templateDir);
+
+    paths.forEach(assetPath => copySync(assetPath, projectDataLocation, {overwrite: true, recursive: true}));
 }

@@ -1,12 +1,24 @@
 #!/usr/bin/env node
+///<reference path="@types/global/index.d.ts"/>
 import clear from "clear";
-import {Choice, prompt} from "prompts";
-import {basename} from "path";
 import {startCase} from "lodash";
-import rimraf from "rimraf";
+import {basename} from "path";
+import {Choice, prompt} from "prompts";
 
-import {compressTemplate, extractAssets, extractTemplate, findEditors, findTemplates, findUnityAssetPackages} from "./unity";
 import {rmDir} from "./files";
+import {
+    compressTemplate,
+    copyTempAssets,
+    createDefaultAssetDirs,
+    extractAssets,
+    extractTemplate,
+    filterOutDependencies,
+    findEditors,
+    findTemplates,
+    findUnityAssetPackages,
+    parsePackageFile,
+    writePackageFile
+} from "./unity";
 
 clear();
 
@@ -66,6 +78,21 @@ const resolveTemplateName = (name: string, version: string) => `${name}-${versio
     console.log();
     const tempAssetDirs = await extractAssets(response.libs);
     const tempTemplateDir = await extractTemplate(response.templateBase);
+
+    const packageFile = parsePackageFile(tempTemplateDir);
+    packageFile.name = response.templateName;
+    packageFile.displayName = response.templateName;
+    packageFile.version = response.templateVersion;
+    packageFile.dependencies = filterOutDependencies(packageFile, [
+        "com.unity.collab-proxy",
+        "com.unity.ide.visualstudio",
+        "com.unity.ide.vscode",
+    ]);
+
+    writePackageFile(tempTemplateDir, packageFile);
+    createDefaultAssetDirs(tempTemplateDir);
+    copyTempAssets(tempTemplateDir, tempAssetDirs);
+
     const newTemplateName = resolveTemplateName(response.templateName, response.templateVersion);
     const compressedTemplate = await compressTemplate(editor, tempTemplateDir, newTemplateName);
 
